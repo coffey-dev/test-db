@@ -15,17 +15,24 @@ export default function App() {
       },
       body: JSON.stringify({
         requests: [
-          { type: "execute", stmt: { sql: "SELECT * FROM mitabla" } }, // Asegúrate de que 'users' es el nombre correcto de tu tabla
+          { type: "execute", stmt: { sql: "SELECT * FROM mitabla LIMIT 10" } }, // Limitar a los primeros 10 registros
           { type: "close" },
         ],
       }),
     })
       .then((res) => res.text()) // Cambiar a .text() para ver la respuesta completa
       .then((text) => {
-        console.log("Response text:", text); // Imprimir la respuesta completa
         try {
           const data = JSON.parse(text);
-          console.log(data);
+          if (data.results) {
+            data.results.forEach(result => {
+              if (result.response && result.response.result && result.response.result.rows) {
+                console.log(result.response.result.rows); // Imprimir solo las filas
+              }
+            });
+          } else {
+            console.log("No results found");
+          }
         } catch (error) {
           console.error("Error parsing JSON:", error);
         }
