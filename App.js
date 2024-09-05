@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function App() {
-  const [names, setNames] = useState([]);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const url = "https://prueba-gurudev.turso.io/v2/pipeline";
-    const authToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MjQ5NDI5MjYsImlkIjoiMjMzMTYwOTktYzE3OS00MmNlLTk1NTAtMzZkY2M2ODIzNjMxIn0.l-aGn0jaL_NUbfnjnkzt9fmAOIR8nVDaKCGdwg8oa5HMe5x1ZsKDAg7nX2h9xhCwGN98uDuiAP242qcUxwfpAQ";
+    const url = "https://pruebamvp-gurudev.turso.io/v2/pipeline";
+    const authToken = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MjU1NTA5NTIsImlkIjoiYzhhMjk3ZTItZjQ1My00OGE4LTkyYzMtODk2M2MwOWIyMGY3In0.EM7Mnnd9wh5aXOnNhb1TjiYgXe8B-oUqXBCJVK11Tepm4VYifDX2Nh_3HJLp0IhjSEG4b-csuefubV-QyXIKCg";
 
     fetch(url, {
       method: "POST",
@@ -17,44 +18,53 @@ export default function App() {
       },
       body: JSON.stringify({
         requests: [
-          { type: "execute", stmt: { sql: "SELECT * FROM mitabla LIMIT 10" } }, // Limitar a los primeros 10 registros
+          { type: "execute", stmt: { sql: "SELECT latitud, longitud, empresa FROM carnicerias" } },
           { type: "close" },
         ],
       }),
     })
-      .then((res) => res.text()) // Cambiar a .text() para ver la respuesta completa
+      .then((res) => res.text())
       .then((text) => {
+        // console.log("Response text:", text); // Comentado para no imprimir en el log
         try {
           const data = JSON.parse(text);
-          if (data.results) {
-            const extractedNames = [];
-            data.results.forEach(result => {
-              if (result.response && result.response.result && result.response.result.rows) {
-                result.response.result.rows.forEach(row => {
-                  if (row[1] && row[1].value) {
-                    extractedNames.push(row[1].value); // Extraer el segundo valor (nombre)
-                  }
-                });
-              }
-            });
-            setNames(extractedNames);
+          if (data.results && data.results[0] && data.results[0].response && data.results[0].response.result && data.results[0].response.result.rows) {
+            const filteredData = data.results[0].response.result.rows.slice(0, 3).map(row => ({
+              latitud: row[0].value,
+              longitud: row[1].value,
+              empresa: row[2].value,
+            }));
+            setData(filteredData);
           } else {
-            console.log("No results found");
+            console.error("Unexpected response structure:", data);
           }
+          setLoading(false);
         } catch (error) {
           console.error("Error parsing JSON:", error);
+          setLoading(false);
         }
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setLoading(false);
+      });
   }, []);
+
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={names}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => <Text style={styles.nameText}>{item}</Text>}
-      />
+      <Text style={styles.title}>Data:</Text>
+      {data.map((item, index) => (
+        <View key={index}>
+           <Text style={styles.largeText}>Empresa: {item.empresa}</Text>
+          <Text style={styles.largeText}>Latitud: {item.latitud}</Text>
+          <Text style={styles.largeText}>Longitud: {item.longitud}</Text>
+         
+        </View>
+      ))}
       <StatusBar style="auto" />
     </View>
   );
@@ -66,11 +76,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 50, // Espacio en blanco al inicio
   },
-  nameText: {
-    fontSize: 24, // Tamaño de la tipografía más grande
-    textAlign: 'center', // Centrar el texto
-    marginVertical: 10, // Espacio vertical entre los elementos
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  largeText: {
+    fontSize: 20,
   },
 });
